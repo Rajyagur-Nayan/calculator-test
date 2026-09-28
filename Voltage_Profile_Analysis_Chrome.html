@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Voltage Profile Analysis</title>
+<style>
+  :root{
+    --navy:#1a3358; --navy-dark:#0f2038;
+    --bg:#f2f4f8; --card:#ffffff;
+    --ok:#1e8e3e; --warn-low:#d93025; --warn-high:#e8710a;
+    --text:#1a1a1a; --muted:#5f6368;
+    --border:#e1e4ea;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;
+    background:var(--bg); color:var(--text); padding-bottom:40px;
+  }
+  header{
+    background:linear-gradient(135deg,var(--navy),var(--navy-dark));
+    color:#fff; padding:22px 18px 20px; text-align:center;
+    position:sticky; top:0; z-index:10; box-shadow:0 2px 10px rgba(0,0,0,.15);
+  }
+  header h1{margin:0; font-size:1.5rem; letter-spacing:.5px;}
+  header p{margin:4px 0 0; font-size:.78rem; opacity:.85;}
+
+  .wrap{max-width:900px; margin:0 auto; padding:20px;}
+  .card{
+    background:var(--card); border-radius:14px; padding:16px;
+    margin-bottom:16px; box-shadow:0 1px 4px rgba(0,0,0,.07);
+    border:1px solid var(--border);
+  }
+  .card h2{
+    font-size:.85rem; text-transform:uppercase; letter-spacing:.6px;
+    color:var(--navy); margin:0 0 12px; font-weight:700;
+  }
+  .row{display:flex; gap:10px; margin-bottom:10px;}
+  .field{flex:1;}
+  label{display:block; font-size:.78rem; color:var(--muted); margin-bottom:4px;}
+  input[type=number]{
+    width:100%; padding:10px 10px; border:1px solid var(--border); border-radius:8px;
+    font-size:1rem; background:#fafbfc;
+  }
+  input[type=number]:focus{outline:2px solid var(--navy); background:#fff;}
+
+  table{width:100%; border-collapse:collapse; font-size:.85rem;}
+  th{
+    background:#eef1f6; color:var(--navy); font-size:.72rem; text-transform:uppercase;
+    padding:8px 6px; text-align:center; letter-spacing:.3px;
+  }
+  td{padding:7px 6px; text-align:center; border-bottom:1px solid var(--border);}
+  td input{width:70px; padding:6px; text-align:center; border:1px solid var(--border); border-radius:6px; font-size:.85rem;}
+  tr:last-child td{border-bottom:none;}
+
+  .btnrow{display:flex; gap:10px; margin-top:4px;}
+  button{
+    flex:1; border:none; border-radius:10px; padding:14px; font-size:.95rem;
+    font-weight:700; cursor:pointer; letter-spacing:.3px; -webkit-tap-highlight-color:transparent;
+  }
+  .btn-primary{background:var(--navy); color:#fff;}
+  .btn-primary:active{background:var(--navy-dark);}
+  .btn-secondary{background:#e9ecf2; color:var(--navy);}
+  .btn-secondary:active{background:#dde1ea;}
+
+  .results-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;}
+  .stat{
+    background:#f7f8fb; border-radius:10px; padding:12px; text-align:center;
+    border:1px solid var(--border);
+  }
+  .stat .label{font-size:.68rem; color:var(--muted); text-transform:uppercase; font-weight:700; letter-spacing:.4px;}
+  .stat .value{font-size:1.25rem; font-weight:800; color:var(--navy); margin-top:4px;}
+  .status-banner{
+    grid-column:1/-1; border-radius:10px; padding:12px; text-align:center;
+    font-weight:800; font-size:1rem; letter-spacing:.3px;
+  }
+  .status-normal{background:#e6f4ea; color:var(--ok);}
+  .status-under{background:#fce8e6; color:var(--warn-low);}
+  .status-over{background:#fdecdc; color:var(--warn-high);}
+  .status-ready{background:#eef1f6; color:var(--muted);}
+
+  .iter-line{font-size:.75rem; color:var(--muted); text-align:center; margin-top:8px;}
+
+  svg{width:100%; height:auto; display:block;}
+  .cond{font-weight:700; font-size:.72rem; padding:3px 6px; border-radius:5px; display:inline-block;}
+  .cond-normal{background:#e6f4ea; color:var(--ok);}
+  .cond-under{background:#fce8e6; color:var(--warn-low);}
+  .cond-over{background:#fdecdc; color:var(--warn-high);}
+
+  .info{
+    font-size:.8rem; text-align:center; color:var(--muted); padding:10px;
+    background:#eef1f6; border-radius:10px;
+  }
+  footer{text-align:center; font-size:.7rem; color:#9aa0a6; padding:10px 20px;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>VOLTAGE PROFILE ANALYSIS</h1>
+  <p>Power System &ndash; II | 5-Bus Radial Distribution System</p>
+</header>
+
+<div class="wrap">
+
+  <div class="card">
+    <h2>System Input</h2>
+    <div class="row">
+      <div class="field">
+        <label>Base Power (MVA)</label>
+        <input type="number" id="baseMVA" value="10" step="0.1">
+      </div>
+      <div class="field">
+        <label>Base Voltage (kV)</label>
+        <input type="number" id="baseKV" value="11" step="0.1">
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Minimum Voltage (p.u.)</label>
+        <input type="number" id="minV" value="0.95" step="0.01">
+      </div>
+      <div class="field">
+        <label>Maximum Voltage (p.u.)</label>
+        <input type="number" id="maxV" value="1.05" step="0.01">
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Bus Load Data</h2>
+    <table>
+      <thead><tr><th>Bus</th><th>P (MW)</th><th>Q (MVAR)</th></tr></thead>
+      <tbody id="loadBody"></tbody>
+    </table>
+  </div>
+
+  <div class="btnrow">
+    <button class="btn-primary" onclick="calcV()">CALCULATE</button>
+    <button class="btn-secondary" onclick="resetApp()">RESET</button>
+  </div>
+
+  <div class="card" style="margin-top:16px;">
+    <h2>Voltage Profile Graph</h2>
+    <svg id="chart" viewBox="0 0 480 300"></svg>
+  </div>
+
+  <div class="card">
+    <h2>Analysis Results</h2>
+    <div class="results-grid">
+      <div class="stat"><div class="label">Minimum Voltage</div><div class="value" id="minResult">-- p.u.</div></div>
+      <div class="stat"><div class="label">Maximum Voltage</div><div class="value" id="maxResult">-- p.u.</div></div>
+      <div class="status-banner status-ready" id="sysStatus">READY</div>
+    </div>
+    <div class="iter-line" id="iterLabel">Iterations: --</div>
+  </div>
+
+  <div class="card">
+    <h2>Bus Voltage Results</h2>
+    <table>
+      <thead><tr><th>Bus</th><th>V (p.u.)</th><th>V (kV)</th><th>Dev (%)</th><th>Condition</th></tr></thead>
+      <tbody id="resultBody"><tr><td colspan="5" style="color:var(--muted);padding:14px;">No results yet</td></tr></tbody>
+    </table>
+  </div>
+
+  <div class="info" id="infoLabel">Ready: Enter data and tap "CALCULATE".</div>
+
+</div>
+
+<footer>Backward/Forward Sweep Method &middot; 5-Bus Radial Feeder</footer>
+
+<script>
+const N = 5;
+const defLoad = [[1,0,0],[2,1.0,0.5],[3,1.2,0.6],[4,1.0,0.5],[5,0.8,0.4]];
+const defLine = [[1,2,0.20,0.40],[2,3,0.25,0.45],[3,4,0.30,0.50],[4,5,0.35,0.55]]; // from,to,R,X (ohm)
+let loadData = defLoad.map(r=>r.slice());
+
+function buildLoadTable(){
+  const body = document.getElementById('loadBody');
+  body.innerHTML = '';
+  loadData.forEach((row,i)=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${row[0]}</td>
+      <td><input type="number" step="0.01" value="${row[1]}" onchange="loadData[${i}][1]=parseFloat(this.value)||0"></td>
+      <td><input type="number" step="0.01" value="${row[2]}" onchange="loadData[${i}][2]=parseFloat(this.value)||0"></td>`;
+    body.appendChild(tr);
+  });
+}
+buildLoadTable();
+
+// Complex number helpers
+function cx(re,im){return {re:re, im:im};}
+function cadd(a,b){return cx(a.re+b.re, a.im+b.im);}
+function csub(a,b){return cx(a.re-b.re, a.im-b.im);}
+function cmul(a,b){return cx(a.re*b.re-a.im*b.im, a.re*b.im+a.im*b.re);}
+function cdiv(a,b){const d=b.re*b.re+b.im*b.im; return cx((a.re*b.re+a.im*b.im)/d, (a.im*b.re-a.re*b.im)/d);}
+function conj(a){return cx(a.re,-a.im);}
+function cabs(a){return Math.sqrt(a.re*a.re+a.im*a.im);}
+
+function calcV(){
+  try{
+    const Sbase = parseFloat(document.getElementById('baseMVA').value);
+    const Vbase = parseFloat(document.getElementById('baseKV').value);
+    const Vmn = parseFloat(document.getElementById('minV').value);
+    const Vmx = parseFloat(document.getElementById('maxV').value);
+
+    if(!(Sbase>0) || !(Vbase>0)){ alert('Base MVA and Base kV must be greater than zero.'); return; }
+    if(!(Vmn < Vmx)){ alert('Minimum voltage must be less than maximum voltage.'); return; }
+
+    const Zbase = (Vbase*Vbase)/Sbase;
+    const R = defLine.map(l=>l[2]/Zbase);
+    const X = defLine.map(l=>l[3]/Zbase);
+    const P = loadData.map(r=>r[1]/Sbase);
+    const Q = loadData.map(r=>r[2]/Sbase);
+
+    // V indexed 0..N-1 for bus 1..N
+    let V = new Array(N).fill(0).map(()=>cx(1,0));
+    const tol = 1e-6, maxIt = 100;
+    let it=0, err=0;
+
+    for(it=1; it<=maxIt; it++){
+      const Vprev = V.map(v=>cx(v.re,v.im));
+      const Iload = new Array(N).fill(0).map(()=>cx(0,0));
+      for(let k=1; k<N; k++){ // bus index 2..N -> k=1..N-1
+        Iload[k] = conj(cdiv(cx(P[k],Q[k]), V[k]));
+      }
+      const Ibr = new Array(N-1).fill(0).map(()=>cx(0,0));
+      for(let k=N-1; k>=1; k--){ // k from N down to 2 (1-indexed) -> here N-1 down to 1
+        Ibr[k-1] = cadd(Ibr[k-1], Iload[k]);
+        if(k < N-1){ Ibr[k-1] = cadd(Ibr[k-1], Ibr[k]); }
+      }
+      V[0] = cx(1,0);
+      for(let k=0; k<N-1; k++){
+        V[k+1] = csub(V[k], cmul(Ibr[k], cx(R[k],X[k])));
+      }
+      err = 0;
+      for(let k=0;k<N;k++){ err = Math.max(err, cabs(csub(V[k],Vprev[k]))); }
+      if(err < tol) break;
+    }
+
+    const Vmag = V.map(v=>cabs(v));
+    const VkV = Vmag.map(v=>v*Vbase);
+    const dev = Vmag.map(v=>(v-1)*100);
+
+    const body = document.getElementById('resultBody');
+    body.innerHTML = '';
+    for(let k=0;k<N;k++){
+      let condClass='cond-normal', condText='NORMAL';
+      if(Vmag[k] < Vmn){ condClass='cond-under'; condText='UNDERVOLTAGE'; }
+      else if(Vmag[k] > Vmx){ condClass='cond-over'; condText='OVERVOLTAGE'; }
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${k+1}</td><td>${Vmag[k].toFixed(4)}</td><td>${VkV[k].toFixed(3)}</td><td>${dev[k].toFixed(2)}</td>
+        <td><span class="cond ${condClass}">${condText}</span></td>`;
+      body.appendChild(tr);
+    }
+
+    const mn = Math.min(...Vmag), bMn = Vmag.indexOf(mn)+1;
+    const mx = Math.max(...Vmag), bMx = Vmag.indexOf(mx)+1;
+    document.getElementById('minResult').textContent = `${mn.toFixed(4)} p.u. (Bus ${bMn})`;
+    document.getElementById('maxResult').textContent = `${mx.toFixed(4)} p.u. (Bus ${bMx})`;
+
+    const statusEl = document.getElementById('sysStatus');
+    const infoEl = document.getElementById('infoLabel');
+    statusEl.className = 'status-banner';
+    if(mn < Vmn){
+      statusEl.classList.add('status-under'); statusEl.textContent = 'UNDERVOLTAGE';
+      infoEl.textContent = `Warning: Bus ${bMn} has voltage below ${Vmn.toFixed(2)} p.u.`;
+    } else if(mx > Vmx){
+      statusEl.classList.add('status-over'); statusEl.textContent = 'OVERVOLTAGE';
+      infoEl.textContent = `Warning: Bus ${bMx} has voltage above ${Vmx.toFixed(2)} p.u.`;
+    } else {
+      statusEl.classList.add('status-normal'); statusEl.textContent = 'NORMAL';
+      infoEl.textContent = 'System is operating within the specified voltage limits.';
+    }
+    document.getElementById('iterLabel').textContent = `Iterations: ${it>maxIt?maxIt:it}   |   Error: ${err.toExponential(2)}`;
+
+    drawChart(Vmag, Vmn, Vmx);
+  }catch(e){
+    alert('Calculation Error: ' + e.message);
+  }
+}
+
+function drawChart(Vmag, Vmn, Vmx){
+  const svg = document.getElementById('chart');
+  const W=480,H=300, padL=45,padR=15,padT=20,padB=35;
+  const yMin = Math.min(0.85, Math.min(...Vmag)-0.03);
+  const yMax = Math.max(1.10, Math.max(...Vmag)+0.03);
+  const xScale = (bus)=> padL + ( (bus-1)/(N-1) )*(W-padL-padR);
+  const yScale = (v)=> H-padB - ( (v-yMin)/(yMax-yMin) )*(H-padT-padB);
+
+  let svgns = 'http://www.w3.org/2000/svg';
+  let parts = [];
+
+  // grid + axes
+  parts.push(`<rect x="0" y="0" width="${W}" height="${H}" fill="#ffffff"/>`);
+  for(let g=0; g<=4; g++){
+    const val = yMin + g*(yMax-yMin)/4;
+    const y = yScale(val);
+    parts.push(`<line x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}" stroke="#e1e4ea" stroke-width="1"/>`);
+    parts.push(`<text x="${padL-6}" y="${y+3}" font-size="9" fill="#5f6368" text-anchor="end">${val.toFixed(2)}</text>`);
+  }
+  for(let bus=1; bus<=N; bus++){
+    const x = xScale(bus);
+    parts.push(`<text x="${x}" y="${H-padB+16}" font-size="9" fill="#5f6368" text-anchor="middle">${bus}</text>`);
+  }
+  parts.push(`<text x="${W/2}" y="${H-4}" font-size="10" fill="#1a3358" text-anchor="middle" font-weight="700">Bus Number</text>`);
+
+  // limit lines
+  const yMinLine = yScale(Vmn), yMaxLine = yScale(Vmx);
+  parts.push(`<line x1="${padL}" y1="${yMinLine}" x2="${W-padR}" y2="${yMinLine}" stroke="#d93025" stroke-width="1.2" stroke-dasharray="5,4"/>`);
+  parts.push(`<text x="${W-padR}" y="${yMinLine-4}" font-size="9" fill="#d93025" text-anchor="end">Min Limit</text>`);
+  parts.push(`<line x1="${padL}" y1="${yMaxLine}" x2="${W-padR}" y2="${yMaxLine}" stroke="#e8710a" stroke-width="1.2" stroke-dasharray="5,4"/>`);
+  parts.push(`<text x="${W-padR}" y="${yMaxLine-4}" font-size="9" fill="#e8710a" text-anchor="end">Max Limit</text>`);
+
+  // voltage line
+  let pathD = Vmag.map((v,i)=> `${i===0?'M':'L'} ${xScale(i+1)} ${yScale(v)}`).join(' ');
+  parts.push(`<path d="${pathD}" fill="none" stroke="#1a3358" stroke-width="2.5"/>`);
+  Vmag.forEach((v,i)=>{
+    parts.push(`<circle cx="${xScale(i+1)}" cy="${yScale(v)}" r="4.5" fill="#1a3358"/>`);
+  });
+
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.innerHTML = parts.join('');
+}
+
+function resetApp(){
+  document.getElementById('baseMVA').value = 10;
+  document.getElementById('baseKV').value = 11;
+  document.getElementById('minV').value = 0.95;
+  document.getElementById('maxV').value = 1.05;
+  loadData = defLoad.map(r=>r.slice());
+  buildLoadTable();
+  document.getElementById('resultBody').innerHTML = '<tr><td colspan="5" style="color:var(--muted);padding:14px;">No results yet</td></tr>';
+  document.getElementById('minResult').textContent = '-- p.u.';
+  document.getElementById('maxResult').textContent = '-- p.u.';
+  const statusEl = document.getElementById('sysStatus');
+  statusEl.className = 'status-banner status-ready';
+  statusEl.textContent = 'READY';
+  document.getElementById('iterLabel').textContent = 'Iterations: --';
+  document.getElementById('infoLabel').textContent = 'Ready: Enter data and tap "CALCULATE".';
+  document.getElementById('chart').innerHTML = '';
+}
+</script>
+
+</body>
+</html>
